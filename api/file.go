@@ -21,6 +21,7 @@ func UploadChunkFile(c *gin.Context) {
 			"code":    "4000",
 			"message": "form no file",
 		})
+		return
 	}
 
 	dst := fmt.Sprintf("public/file/%s/%s", md5, chunkMd5)
@@ -30,6 +31,7 @@ func UploadChunkFile(c *gin.Context) {
 			"code":    "2000",
 			"message": "success",
 		})
+		return
 	}
 	err = c.SaveUploadedFile(file, dst)
 	if err != nil {
@@ -37,11 +39,13 @@ func UploadChunkFile(c *gin.Context) {
 			"code":    "4000",
 			"message": "file save failed",
 		})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"code":    "2000",
 		"message": "success",
 	})
+	return
 }
 
 // MergeChunk
@@ -57,6 +61,7 @@ func MergeChunk(c *gin.Context) {
 			"message": "success",
 			"url":     "",
 		})
+		return
 	}
 
 	files, _ := ioutil.ReadDir(dir)
@@ -82,7 +87,7 @@ func MergeChunk(c *gin.Context) {
 		"message": "success",
 		"url":     "",
 	})
-
+	return
 }
 
 // ChunksState
@@ -90,6 +95,13 @@ func MergeChunk(c *gin.Context) {
 // 查询文件分块上传状态
 func ChunksState(c *gin.Context) {
 	md5 := c.Query("md5")
+	if md5 == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    "4000",
+			"message": "no such md5",
+		})
+		return
+	}
 	dir := fmt.Sprintf("public/file/%s", md5)
 
 	var chunkList []string
@@ -100,6 +112,7 @@ func ChunksState(c *gin.Context) {
 			"code":    "4000",
 			"message": "no such md5",
 		})
+		return
 	}
 
 	files, _ := ioutil.ReadDir(dir)
@@ -113,6 +126,7 @@ func ChunksState(c *gin.Context) {
 				"message": "success",
 				"state":   1,
 			})
+			return
 		}
 	}
 
@@ -122,7 +136,7 @@ func ChunksState(c *gin.Context) {
 		"state":      0,
 		"chunk-list": chunkList,
 	})
-
+	return
 }
 
 // PathExists
@@ -131,10 +145,10 @@ func ChunksState(c *gin.Context) {
 func PathExists(dst string) (bool, error) {
 	_, err := os.Stat(dst)
 	if err != nil {
-		return true, nil
+		return false, err
 	}
 	if os.IsNotExist(err) {
-		return false, nil
+		return false, err
 	}
-	return false, err
+	return true, nil
 }
