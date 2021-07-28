@@ -112,7 +112,7 @@ func UploadChunkFile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":     "2000",
 		"message":  "success",
-		"progress": float64(len(files)) / float64(chunks),
+		"progress": 100 * (float64(len(files)) / float64(chunks)),
 		"count":    float64(len(files)),
 	})
 
