@@ -17,7 +17,7 @@ func UploadChunkFile(c *gin.Context) {
 	fileMD5 := c.PostForm("file-md5")
 	chunkMD5 := c.PostForm("chunk-md5")
 	chunksCount := c.PostForm("chunks-count")
-	chunksIndex := c.PostForm("chunks-index")
+	chunksIndex := c.PostForm("chunk-index")
 	chunks, _ := strconv.Atoi(chunksCount)
 
 	// 接收文件
@@ -112,7 +112,8 @@ func UploadChunkFile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":     "2000",
 		"message":  "success",
-		"progress": len(files) / chunks,
+		"progress": float64(len(files)) / float64(chunks),
+		"count":    float64(len(files)),
 	})
 
 	return
