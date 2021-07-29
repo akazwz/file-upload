@@ -15,7 +15,5 @@ func main() {
 		AllowHeaders:     []string{"*"},
 	}))
 	r.Handle("POST", "/chunk-file", api.UploadChunkFile)
-	r.Handle("POST", "/merge-chunks", api.MergeChunks)
-	r.Handle("GET", "/chunks-state", api.ChunksState)
 	_ = r.Run(":8888")
 }
