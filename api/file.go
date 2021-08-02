@@ -19,6 +19,28 @@ func UploadChunkFile(c *gin.Context) {
 	chunksIndex := c.PostForm("chunk-index")
 	chunks, _ := strconv.Atoi(chunksCount)
 
+	// 判断文件是否已经存在,存在直接秒传
+	completeFile := fmt.Sprintf("public/file/%v/%v", fileMD5, fileMD5)
+	isExist, err := PathExists(completeFile)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    "4000",
+			"message": "check file existed failed",
+		})
+		return
+	}
+
+	if isExist {
+		c.JSON(http.StatusOK, gin.H{
+			"code":     "2000",
+			"message":  "success",
+			"progress": 100,
+			"url":      "",
+			"a-pass":   1,
+		})
+		return
+	}
+
 	// 接收文件
 	chunkFile, err := c.FormFile("chunk-file")
 	// form接收文件错误
