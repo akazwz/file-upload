@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
+	"os"
 )
 
 // HashFileByAlgo 根据算法获取文件hash
@@ -48,4 +49,18 @@ func getHash(algo string) hash.Hash {
 	default:
 		return sha256.New()
 	}
+}
+
+// PathExists
+// check file or dir exists
+// 检查文件或者文件夹是否存在
+func PathExists(dst string) (bool, error) {
+	_, err := os.Stat(dst)
+	if err != nil {
+		return false, err
+	}
+	if os.IsNotExist(err) {
+		return false, err
+	}
+	return true, nil
 }

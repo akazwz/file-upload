@@ -40,6 +40,7 @@ func InitRouter() *gin.Engine {
 	{
 		fileGroup.POST("", file.UploadFile)
 
+		fileGroup.POST("/chunk", file.UploadChunk)
 		fileGroup.POST("/chunks", file.UploadChunkFile)
 		fileGroup.POST("/chunks/merge", file.MergeChunks)
 		fileGroup.GET("/chunks/state", file.ChunksState)
