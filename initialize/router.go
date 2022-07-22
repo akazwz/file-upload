@@ -38,7 +38,7 @@ func InitRouter() *gin.Engine {
 
 	fileGroup := r.Group("/file")
 	{
-		fileGroup.POST("/", file.UploadFile)
+		fileGroup.POST("", file.UploadFile)
 
 		fileGroup.POST("/chunks", file.UploadChunkFile)
 		fileGroup.POST("/chunks/merge", file.MergeChunks)
