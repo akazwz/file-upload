@@ -1,21 +1,37 @@
 package main
 
 import (
-	"file-upload/api"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/akazwz/file-upload/initialize"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	r := gin.Default()
-	r.Use(cors.New(cors.Config{
-		AllowCredentials: true,
-		AllowAllOrigins:  true,
-		AllowMethods:     []string{"*"},
-		AllowHeaders:     []string{"*"},
-	}))
-	r.Handle("POST", "/chunk-file", api.UploadChunkFile)
-	r.Handle("POST", "/merge-chunks", api.MergeChunks)
-	r.Handle("GET", "/chunks-state", api.ChunksState)
-	_ = r.Run(":8888")
+	r := initialize.InitRouter()
+	// 读取环境变量配置
+	InitEnvConfig()
+
+	port := os.Getenv("API_PORT")
+	log.Println("PORT:" + port)
+
+	s := &http.Server{
+		Addr:    port,
+		Handler: r,
+	}
+
+	if err := s.ListenAndServe(); err != nil {
+		log.Fatalln("Api启动失败")
+	}
+}
+
+func InitEnvConfig() {
+	if os.Getenv("GIN_MODE") != "release" {
+		err := godotenv.Load(".env.local")
+		if err != nil {
+			log.Fatalln("读取配置文件失败")
+		}
+	}
 }
