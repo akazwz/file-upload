@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // HashFileByAlgo 根据算法获取文件hash
@@ -59,19 +60,19 @@ func getHash(algo string) hash.Hash {
 // PathExists
 // check file or dir exists
 // 检查文件或者文件夹是否存在
-func PathExists(dst string) (bool, error) {
+func PathExists(dst string) bool {
 	_, err := os.Stat(dst)
 	if err != nil {
-		return false, err
+		return false
 	}
 	if os.IsNotExist(err) {
-		return false, err
+		return false
 	}
-
-	return true, nil
+	return true
 }
 
-func MergeChunkFile(dir string) error {
+func MergeChunkFile(dir string) (int64, error) {
+	start := time.Now().UnixMicro()
 	// 按照文件名index排序读取文件夹内的文件
 	files, _ := ioutil.ReadDir(dir)
 	sort.Slice(files, func(i, j int) bool {
@@ -87,7 +88,7 @@ func MergeChunkFile(dir string) error {
 	// 创建完整文件
 	completeFile, err := os.Create(fmt.Sprintf("%s/complete", dir))
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	for _, file := range files {
@@ -99,14 +100,16 @@ func MergeChunkFile(dir string) error {
 		// 读取 chunk file
 		bytes, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", dir, file.Name()))
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		// 完整文件写入数据
 		_, err = completeFile.Write(bytes)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
-	return nil
+	end := time.Now().UnixMicro()
+	timeSend := end - start
+	return timeSend, nil
 }

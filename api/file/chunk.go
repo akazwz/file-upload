@@ -2,6 +2,10 @@ package file
 
 import (
 	"fmt"
+	"github.com/akazwz/file-upload/api"
+	"github.com/akazwz/file-upload/api/request"
+	"github.com/akazwz/file-upload/utils"
+	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -9,11 +13,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/akazwz/file-upload/api/request"
-	"github.com/akazwz/file-upload/utils"
-	"github.com/gin-gonic/gin"
 )
 
 // UploadChunk 上传分块文件
@@ -65,7 +64,7 @@ func UploadChunk(c *gin.Context) {
 	dst := fmt.Sprintf("public/file/%s/%s", fileHash, chunkIndex+"-"+chunkHash)
 
 	// 判断文件夹是否存在,不存在创建文件夹
-	pathExists, _ := utils.PathExists(dir)
+	pathExists := utils.PathExists(dir)
 	if !pathExists {
 		err = os.Mkdir(dir, os.ModePerm)
 		if err != nil {
@@ -77,7 +76,7 @@ func UploadChunk(c *gin.Context) {
 	}
 
 	// 判断分块文件是否已经存在,已经存在直接返回成功
-	exists, _ := utils.PathExists(dst)
+	exists := utils.PathExists(dst)
 	if exists {
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "此分块文件已经上传",
@@ -107,8 +106,6 @@ func UploadChunk(c *gin.Context) {
 
 // MergeChunk 合并分块文件
 func MergeChunk(c *gin.Context) {
-	// 记录开始时间
-	start := time.Now().Nanosecond()
 	// 获取参数
 	var mergeChunk request.MergeChunkFile
 	err := c.ShouldBind(&mergeChunk)
@@ -126,9 +123,21 @@ func MergeChunk(c *gin.Context) {
 	//  分块文件 保存的 文件夹路径
 	dir := fmt.Sprintf("public/file/%s", fileHash)
 
+	completeFile := fmt.Sprintf("%s/complete", dir)
+	// 判断是否存在完整文件
+	exists := utils.PathExists(completeFile)
+
+	if exists {
+		c.AbortWithStatusJSON(http.StatusCreated, gin.H{
+			"message": "完整文件已经存在",
+		})
+		return
+	}
+
 	// 读取文件夹下 所有的分块文件
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
+		log.Println(err)
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"message": "读取文件夹失败",
 		})
@@ -143,17 +152,14 @@ func MergeChunk(c *gin.Context) {
 		return
 	}
 	// 合并文件， 完整文件为 hash/complete
-	err = utils.MergeChunkFile(dir)
+	timeSpend, err := utils.MergeChunkFile(dir)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"message": "合并文件失败",
 		})
 	}
-	// 记录结束时间
-	end := time.Now().Nanosecond()
-	// 合并消耗时间
-	timeSpend := end - start
 	c.JSON(http.StatusCreated, gin.H{
+		"success":    true,
 		"time_spend": timeSpend,
 	})
 }
@@ -163,7 +169,30 @@ func ChunkState(c *gin.Context) {
 	hash := c.Query("hash")
 	// 文件夹路径
 	dir := fmt.Sprintf("public/file/%s", hash)
+	// 判断文件夹是否存在
+	dirExists := utils.PathExists(dir)
+	// 文件夹不存在
+	if !dirExists {
+		c.AbortWithStatusJSON(http.StatusOK, gin.H{
+			"message": "没有此文件",
+			"code":    api.CodeStatusNoFile,
+		})
+		return
+	}
 
+	// 完整文件路径
+	completeFile := fmt.Sprintf("%s/complete", dir)
+	// 判断是否存在完整文件
+	exists := utils.PathExists(completeFile)
+
+	// 存在完整文件， 上传成功
+	if exists {
+		c.AbortWithStatusJSON(http.StatusOK, gin.H{
+			"message": "上传成功",
+			"code":    api.CodeStatusSuccess,
+		})
+		return
+	}
 	// 按照文件名index排序读取文件夹内的文件
 	files, _ := ioutil.ReadDir(dir)
 	sort.Slice(files, func(i, j int) bool {
@@ -176,15 +205,25 @@ func ChunkState(c *gin.Context) {
 		return indexInt < nextInt
 	})
 
-	var indexes []string
-	// 写入文件
+	var indexes []int
+	// 遍历分块文件
 	for _, file := range files {
 		filename := file.Name()
 		index := strings.Split(filename, "-")[0]
-		log.Println(index)
-		indexes = append(indexes, index)
+		indexInt, _ := strconv.Atoi(index)
+		indexes = append(indexes, indexInt)
+	}
+
+	if len(indexes) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "暂无分片文件",
+			"code":    api.CodeStatusEmpty,
+		})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"indexes": indexes,
+		"message": "获取已上传分块index",
+		"code":    api.CodeSuccessCommon,
 	})
 }
