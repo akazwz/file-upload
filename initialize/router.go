@@ -38,12 +38,12 @@ func InitRouter() *gin.Engine {
 
 	fileGroup := r.Group("/file")
 	{
+		// 简单上传
 		fileGroup.POST("", file.UploadFile)
-
+		// 分块上传
 		fileGroup.POST("/chunk", file.UploadChunk)
-		fileGroup.POST("/chunks", file.UploadChunkFile)
-		fileGroup.POST("/chunks/merge", file.MergeChunks)
-		fileGroup.GET("/chunks/state", file.ChunksState)
+		fileGroup.POST("/chunk/merge", file.MergeChunk)
+		fileGroup.GET("/chunk/state", file.ChunkState)
 	}
 	return r
 }

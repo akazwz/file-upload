@@ -6,11 +6,16 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"fmt"
 	"hash"
 	"io"
+	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"os"
+	"sort"
+	"strconv"
+	"strings"
 )
 
 // HashFileByAlgo 根据算法获取文件hash
@@ -62,5 +67,46 @@ func PathExists(dst string) (bool, error) {
 	if os.IsNotExist(err) {
 		return false, err
 	}
+
 	return true, nil
+}
+
+func MergeChunkFile(dir string) error {
+	// 按照文件名index排序读取文件夹内的文件
+	files, _ := ioutil.ReadDir(dir)
+	sort.Slice(files, func(i, j int) bool {
+		// 获取文件 index
+		filename := files[i].Name()
+		index := strings.Split(filename, "-")[0]
+
+		indexInt, _ := strconv.Atoi(index)
+		nextInt, _ := strconv.Atoi(strings.Split(files[j].Name(), "-")[0])
+		return indexInt < nextInt
+	})
+
+	// 创建完整文件
+	completeFile, err := os.Create(fmt.Sprintf("%s/complete", dir))
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		/* 无用文件, 跳过 */
+		if file.Name() == ".BD_Store" {
+			continue
+		}
+
+		// 读取 chunk file
+		bytes, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", dir, file.Name()))
+		if err != nil {
+			return err
+		}
+
+		// 完整文件写入数据
+		_, err = completeFile.Write(bytes)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
